@@ -6,7 +6,6 @@ iterative calculation algorithm, or to control its execution, i.e. abort it
 when certain criterions are met.
 
 
-
 Copyright notice
 ----------------
 
