@@ -21,18 +21,17 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
 #
-"""This module offers different methods to show the current status of an
-iterative calculation algorithm, or to control its execution, i.e. abort it
-when certain criterions are met.
-
-To do:
---> write variant of Converge or extend Converge to use standard error as
-    criterion
-
-Written by Daniel Jung, Jacobs University Bremen, Germany (2011-2012).
-"""
+"""This module offers different methods for showing the current status of an
+iterative algorithm, or to control its execution, for example to abort it as
+soon as certain abort criterions are met."""
+#
+# To do:
+# --> write variant of Converge or extend Converge to use standard error as
+#     criterion
+#
 __created__ = '2011-09-13'
 __modified__ = '2014-01-14'
+
 import calendar
 import commands
 import datetime
@@ -47,37 +46,49 @@ import tty
 
 
 class Bar(object):
-    """Display progress bar of a certain loop. Instantiate it before loop. Call
-    the method "step" at the end of each loop (don't forget to do the same
-    before any occurence of "continue"). If loop is left early (break), or if
+    """Display a progress bar when executing a loop with a fixed number of
+    iterations.
+
+    Usage:
+
+    Instantiate this class before loop. Call the method *step()* at the end of
+    each loop (do not forget to do the same before any occurence of
+    *continue*). If the loop is left early (i.e., if *break* is called), or if
     you want to make sure the line break is done after the loop, call the
-    method "end". To reset the counter, call the method "reset".
+    method *end()*. To reset the counter, call the method *reset()*.
 
-    On initialization, the number of iterations "nstep" must be specified.
-    Additional keyword arguments: text    : User-defined text message (instead
-    of "Progress") width   : Width of the current shell window. Default: 80
-    verbose : If set to False, the progress bar isn't shown etc     : If set to
-    True, show estimated time to complete
+    On initialization, the number of iterations *nstep* must be specified.
+    Additional keyword arguments include:
 
-    This class is only meant to be used in loops where the number of steps is
-    known before entering the loop. This excludes all iterative algorithms that
-    leave the loop only on some convergence criterions after a variable number
-    of steps (e.g., while-loops). Of course, one could "estimate" the number of
-    loops that will probably be used, but this is not the way this class is
-    intended to be used.
+    *text*
+        User-defined text message (instead of "Progress").
+    *width*
+        Width of the current shell window. Default: 80.
+    *verbose*
+        If set to *False*, the progress bar is not displayed.
+    *etc*
+        If set to *True*, show "Estimated Time to Complete". The remaining time
+        the loop will need to finish is calculated by linear extrapolation of
+        the time that already passed since the loop has been entered.
 
-    Future ideas:
-    --> multiple progress bars at once, to show status of multiple subprocesses
-    --> allow nested progress bars, passing and multiplying step numbers to the
-        inner-next instance
-    --> report elapsed time instead of printing "ETC 0 sec"
-    --> save start and end times (and duration), to check them later
-
-    Written by Daniel Jung, Jacobs University Bremen, Germany (2011-2012).
-    """
+    This class is meant to be used in loops where the number of iteration steps
+    is already known before entering the loop (i.e., for-loops). This excludes
+    all iterative algorithms that leave the loop on some convergence criterions
+    after a variable number of steps (e.g., while-loops). Of course, the number
+    of loops that will probably be used could be estimated, but this is not the
+    way this class is intended to be used. See the class *OpenBar* for that."""
+    #
+    # TO DO:
+    #
+    # - multiple progress bars at once, to show status of multiple subprocesses
+    # - allow nested progress bars, passing and multiplying step numbers to the
+    #   inner-next instance
+    # - report elapsed time instead of printing "ETC 0 sec"
+    # - save start and end times (and duration), to check them later"""
+    #
     __created__ = '2011-09-13'
     __modified__ = '2012-09-04'
-    # former tb.Progress from 2011-02-13 until 2011-06-09
+    # former tb.Progress from 2011-02-13 - 2011-06-09
 
     def __init__(self, nstep=1, text='progress', width=None, verbose=True,
                  etc=True):
@@ -126,7 +137,7 @@ class Bar(object):
         self._lastcall = now
 
     def jump(self, howmany=1):
-        """Skip one or several steps. Using this instead of step is only
+        """Skip one or several steps. Using this instead of *step()* is only
         important for the correct calculation of the estimated time to complete
         (ETC)."""
         if not self._verbose:
@@ -149,6 +160,7 @@ class Bar(object):
         self._lastcall = now
 
     def write(self):
+        """Update the progress bar on the screen."""
         if not self._verbose:
             return
 
@@ -198,6 +210,7 @@ class Bar(object):
             self.end()
 
     def end(self):
+        """Leave the progress bar, insert a line break on the screen."""
         if not self._verbose:
             return
         if not self._end:
@@ -205,6 +218,7 @@ class Bar(object):
             self._end = True
 
     def reset(self):
+        """Reset the counter, start over with the progress bar."""
         self.end()
         now = time.time()
         self._step = 0
@@ -237,24 +251,26 @@ class OpenBar(object):
     be this accuracy.
 
     Future plans:
-    --> use something different than linear extrapolation"""
+
+    - use something different than linear extrapolation"""
     # 2012-03-05
 
     def __init__(self, target, start=None, text='progress', width=None,
                  verbose=True, etc=False):
-        pass
+        raise NotImplementedError
 
 
 class Monitor(object):
-    """Monitor the values of certain variables within a loop (e.g., for
-    iterative algorithms). Uses the class StatusLine.
+    """Monitor the values of certain variables as they change within a loop
+    (e.g., for iterative algorithms). Depends on the class *StatusLine*.
 
-    Update the line by using carriage return each time the method "step" is
-    called. Do this until the method "end" is called (then, a line break is
-    issued).
-
-    Future plans:
-    --> support complex numbers"""
+    Update the line by using carriage return each time the method *step()* is
+    called. Do this until the method *end()* is called (then, a line break is
+    issued)."""
+    #
+    # To do:
+    # --> support complex numbers
+    #
     # 2011-09-13 - 2012-07-16
     # former tb.Monitor from 2011-05-26 - 2011-06-09
 
@@ -287,7 +303,8 @@ class Monitor(object):
         self._write()
 
     def update(self, **values):
-        """Update one or more values, or add new variables to monitor."""
+        """Update the values of one or more variables, or add new variables to
+        the status line."""
         if not self._verbose:
             return
         self._values.update(**values)
@@ -305,15 +322,15 @@ class Monitor(object):
         #self._write()
 
     def end(self):
-        """Finish monitoring values, make the line break (if not already done).
-        Update the line one last time."""
+        """Finish monitoring values, issue a line break (if not already done).
+        Update the status line one last time."""
         if not self._verbose:
             return
         self._line.end()
 
     def reset(self):
-        """Reset this object. Empty the list of values and begin a new status
-        line."""
+        """Reset the status line. Empty the list of values and begin a new
+        status line."""
         # 2012-04-26
         if not self._verbose:
             return
@@ -323,8 +340,8 @@ class Monitor(object):
 
     def _write(self):
         """Write new line to stdout (overwrite existing line using carriage
-        return). If now is True, tell the StatusLine instance to ignore the
-        delay."""
+        return). If *now* is *True*, tell the *StatusLine* instance to ignore
+        the delay."""
         # 2012-07-16
 
         if not self._verbose:
@@ -378,12 +395,12 @@ class Monitor(object):
             del self._formats[name]
         self._write()
 
-    def remove_value(self, name):
-        """Stop monitoring the specified variable."""
-        del self._values[name]
-        del self._lengths[name]
-        del self._formats[name]
-        self._write()
+    # def remove_value(self, name):
+    #     """Stop monitoring the specified variable."""
+    #     del self._values[name]
+    #     del self._lengths[name]
+    #     del self._formats[name]
+    #     self._write()
 
     def __enter__(self):
         return self
@@ -395,35 +412,37 @@ class Monitor(object):
         """Set the delay of the StatusLine instance."""
         # 2012-07-16
         if delay < 0:
-            raise ValueError('delay must be non-negative float')
+            raise ValueError('delay must be a non-negative float')
         self._line.delay = float(delay)
 
 
 class Abort(object):
-    """Check keyboard buffer if a certain key has been pressed.
+    """Check keyboard buffer for a certain key to be pressed.
 
     Initialize before your loop (e.g., of an iterative algorithm). Check within
     the loop body (e.g., break the loop on positive check). Finalize (end)
     after the loop. Do not forget to finalize, so that your terminal is put
-    back into normal mode! Or use it as context manager (use the with
-    statement), then finalization should be done automatically.
+    back into normal mode! Or use it as context manager (use the *with*
+    statement), then finalization is done automatically.
 
     Example:
-    > import time
-    > with Abort() as a:
-    >     for i in range(10):
-    >         time.sleep(1)  # do stuff
-    >         if a.check():
-    >             break  # leave loop early, because "q" has been pressed
-    > print e.buff"""
+
+        >>> import time
+        >>> with Abort() as a:
+        >>>     for i in range(10):
+        >>>         time.sleep(1)  # do something
+        >>>         if a.check():
+        >>>             break  # leave loop early, because "q" has been pressed
+    """
     # 2012-01-18 - 2013-07-24
 
     def __init__(self, key='q', timeout=0):
-        """Initialize. Specify key and timeout. Put terminal into cbreak mode.
-
-        Future plans:
-        --> enable key combinations (e.g., CTRL+q)
-        --> enable special keys (e.g., ESC)"""
+        """Initialize. Specify key and timeout. Put terminal into cbreak mode."""
+        #
+        # To do:
+        # --> enable key combinations (e.g., CTRL+q)
+        # --> enable special keys (e.g., ESC)"""
+        #
 
         # get key
         if len(key) != 1:
@@ -452,9 +471,9 @@ class Abort(object):
         tty.setcbreak(sys.stdin.fileno())
 
     def check(self):
-        """Check if the key has been pressed in the meanwhile. All other
-        contents of the keyboard buffer will be lost and cannot be
-        recovered."""
+        """Check if the key has been pressed by now. All other contents of the
+        keyboard buffer are ignored."""
+
         if self.disabled:
             return
         if self.aborted:
@@ -470,7 +489,7 @@ class Abort(object):
         return False
 
     def end(self):
-        """Finalize. Put terminal back into normal mode. Return string
+        """Finalize. Put the terminal back into normal mode. Return string
         buffer."""
         if self.disabled:
             return
@@ -478,7 +497,7 @@ class Abort(object):
         try:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.oldattr)
         except:
-            pass  # should we issue a warning?
+            pass  # should a warning be issued?
 
         return  # self.buff  # creates a lot of output ("qqqqqqqqqqqqq")
 
@@ -496,7 +515,7 @@ class Abort(object):
         self.aborted = False
 
     def report(self):
-        """If this handler was triggered, display a message."""
+        """If the handler was triggered, display a message."""
         if self.aborted:
             print 'Process has been aborted by key press (%s)' % self.key
 
@@ -505,10 +524,15 @@ class Until(object):
     """Check if a certain date/time has been reached. Can be used to
     conveniently confine the execution time of an iterative algorithm.
 
-    To do:
-    --> define word "next", excluding the present day, to allow something like
-        "next tuesday" ==> even if it is tuesday right now, run until next
-        tuesday"""
+    You can specify either a maximum duration (execution time) or a specific
+    date."""
+    #
+    # To do:
+    # --> define word "next", excluding the present day, to allow something
+    #     like "next tuesday" ==> even if it is tuesday right now, run until
+    #     next tuesday
+    # --> document the syntax for specifying dates and durations
+    #
     # 2012-06-19 - 2013-07-23
 
     MONTHS = [month.lower() for month in calendar.month_name[1:]]
@@ -780,14 +804,14 @@ class Until(object):
         self.timestamp = time.mktime(timetuple)
 
     def check(self):
-        """Check if the specified time has already been passed."""
+        """Check if the specified time has already been reached."""
         # 2012-06-25 - 2012-06-27
         return False if self.timestamp is None \
             else time.time() > self.timestamp
 
     def isdatetime(self, string):
         """Decide if the given string contains a date-time combination. If so,
-        return True. Otherwise, it will contain a duration, and False is
+        return *True*. Otherwise, it will contain a duration, and *False* is
         returned."""
         # 2012-06-25 - 2012-06-26
         return self.one_in(['/', ':', '-', '.', 'tomorrow']+self.MONTHS +
@@ -796,8 +820,8 @@ class Until(object):
 
     @staticmethod
     def one_in(seq, obj):
-        """Return True if at least one element of the given sequence "seq" is
-        contained in the given object "obj". Otherwise, return False."""
+        """Return *True* if at least one element of the given sequence *seq* is
+        contained in the given object *obj*. Otherwise, return *False*."""
         # 2012-06-25
         for elem in seq:
             if elem in obj:
@@ -806,8 +830,8 @@ class Until(object):
 
     @staticmethod
     def one_is(seq, obj):
-        """Return True if at least one element of the given sequence "seq" is
-        identical to the object "obj". Otherwise, return False."""
+        """Return *True* if at least one element of the given sequence *seq* is
+        identical to the object *obj*. Otherwise, return *False*."""
         # 2012-06-25
         for elem in seq:
             if elem is obj:
@@ -816,8 +840,8 @@ class Until(object):
 
     @staticmethod
     def one_eq(seq, obj):
-        """Return True if at least one element of the given sequence "seq" is
-        equal to the object "obj". Otherwise, return False."""
+        """Return *True* if at least one element of the given sequence *seq* is
+        equal to the object *obj*. Otherwise, return *False*."""
         # 2012-06-25
         for elem in seq:
             if elem == obj:
@@ -826,8 +850,8 @@ class Until(object):
 
     @staticmethod
     def only_digits(string):
-        """Return True if the given string contains only digits. Otherwise,
-        return False."""
+        """Return *True* if the given string contains only digits. Otherwise,
+        return *False*."""
         # 2012-06-26
         for char in string:
             if char not in '0123456789':
@@ -861,29 +885,29 @@ class Until(object):
         pass
 
     def report(self):
-        """If this handler was triggered, display a message."""
+        """If this handler has been triggered, display a message."""
         if self.check():
             print 'Timelimit has been reached (%s).' \
                 % time.ctime(self.timestamp)
 
 
 class Converge(object):
-    """Check data for convergence criterion in some sort of iteration step of
-    an interative algorithm. Specify a certain tolerance (accuracy) that should
-    be reached. Increase the "smooth value" to average over the last few
-    Deltas.
-
-    Future plans:
-    --> choose from various convergence criterions (also based on standard
-        error)
-    --> could choose from mean, gmean, min, max, max-min (peak-to-peak), ...
-        (find more under http://en.wikipedia.org/wiki/Average)
-    --> offer relative and absolute versions of each criterion
-    --> let the user specify his own criterion (as a function object)
-    --> use Cython, write version that is callable from C, support OpenMP
-    --> add feature to remember several values (e.g., 5) and check that all the
-        deltas are small enough (then, it is not enought that "by chance" the
-        delta value drops below the tolerance)"""
+    """Check data for convergence criterion within an interative algorithm.
+    Specify a certain tolerance (accuracy) that should be reached. Increase the
+    "smooth value" to average over the last few deltas."""
+    #
+    # Future plans:
+    # --> choose from various convergence criterions (also based on standard
+    #     error)
+    # --> could choose from mean, gmean, min, max, max-min (peak-to-peak), ...
+    #     (find more under http://en.wikipedia.org/wiki/Average)
+    # --> offer relative and absolute versions of each criterion
+    # --> let the user specify his own criterion (as a function object)
+    # --> use Cython, write version that is callable from C, support OpenMP
+    # --> add feature to remember several values (e.g., 5) and check that all the
+    #     deltas are small enough (then, it is not enought that "by chance" the
+    #     delta value drops below the tolerance)"""
+    #
     # 2012-03-02 - 2014-01-14
 
     def __init__(self, tol=None, smooth=1):  # active=True, criterion=None
@@ -902,8 +926,9 @@ class Converge(object):
         self._delta = []
 
     def check(self, data):
-        """Check convergence criterion. Return True if the requested accuracy
-        is reached, False otherwise. If data is None, return False."""
+        """Check convergence criterion. Return *True* if the requested accuracy
+        has been reached, otherwise *False*. If *data* is *None*, return
+        *False*."""
         if data is None:
             return False
 
@@ -945,7 +970,7 @@ class Converge(object):
         return converged
 
     def delta(self):
-        """Return the current mean delta (based on the last call of "check").
+        """Return the current mean delta (based on the last call of *check()*).
         Return -1 if the delta list is still empty."""
         if len(self._delta) > 0:
             mdelta = numpy.mean(self._delta)
@@ -965,14 +990,14 @@ class Converge(object):
         pass
 
     def report(self):
-        """If this handler was triggered, display a message."""
+        """If the handler was triggered, display a message."""
         if self.check():
             print 'Data converged within a tolerance of %g.' % self.tol
 
 
 def get_columns():
-    """Try to get number of columns of the current terminal window. Otherwise,
-    return standard (80 columns)."""
+    """Try to get the number of columns of the current terminal window. If
+    failing, return standard width (80 columns)."""
     # 2012-03-05
     try:
         # then try environment variable
@@ -1039,7 +1064,7 @@ class StatusLine(object):
     def update(self, line):
         """Update the line by the given string, replacing the old line.
         The line only gets printed if the line has changed, and if the given
-        delay time has been passed. If now is True, ignore the delay."""
+        delay time has been passed. If *now* is *True*, ignore the delay."""
         # 2012-04-10 - 2012-07-16
 
         # respect delay time
@@ -1054,7 +1079,7 @@ class StatusLine(object):
         self._write(line)
 
     def end(self):
-        """End status line, make line break (only if this status line has
+        """End status line, issue a line break (only if the status line has
         already been used)."""
         # 2012-04-10 - 2012-04-26
         if self._started and not self._ended:
@@ -1072,8 +1097,8 @@ class StatusLine(object):
         return self.end()
 
     def reset(self):
-        """Reset status line (make a line break if neccessary and begin a new
-        status line)."""
+        """Reset the status line (make a line break if neccessary and begin a
+        new status line)."""
         # 2012-04-26
         self.end()
         self._oldline = ''
@@ -1085,10 +1110,10 @@ class Terminate(object):
     """Trap the TERM signal (15). For example, you can stop an interative
     algorithm in a controlled way, leaving the loop after the next iteration
     and still saving the results. This is done by sending the TERM signal to
-    the process (also remotely), i.e. in the shell you can do "kill 12345", or
-    you can use "top".
+    the process (also possible remotely), i.e. in a Unix shell you can do `kill
+    12345`, or you can use the program *top*.
 
-    Works on Unix systems (Linux etc.)."""
+    Note: Works only on Unix-based systems (Linux etc.)."""
     # 2012-07-16 - 2012-07-17
 
     def __init__(self):
@@ -1102,20 +1127,21 @@ class Terminate(object):
         signal.signal(signal.SIGTERM, self.terminate)
 
     def terminate(self, signal, frame):
-        """If the TERM signal is received, this method is executed, setting the
-        flag to True."""
+        """If the TERM signal has been received, this method is executed,
+        setting the flag to *True*."""
         # 2012-07-16
         # former tb.kpm.__init__._Ados.terminate and
         # tb.kpm.__init__._Gdos.terminate
         self.terminated = True
 
     def check(self):
-        """Return True if a TERM signal has been received, otherwise False."""
+        """Return *True* if a TERM signal has been received, otherwise
+        *False*."""
         # 2012-07-16
         return self.terminated
 
     def reset(self):
-        """Reset the terminate handler, setting the flag back to False and
+        """Reset the terminate handler, setting the flag back to *False* and
         waiting for a new TERM signal."""
         # 2012-07-16
         self.terminated = False
