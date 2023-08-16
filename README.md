@@ -1,5 +1,5 @@
-progress
-========
+progmon - a simple progress monitor
+===================================
 
 This module offers different methods to show the current status of an
 iterative calculation algorithm, or to control its execution, i.e. abort it
@@ -9,8 +9,8 @@ when certain criterions are met.
 Copyright notice
 ----------------
 
-Copyright (C) 2013-2014 Daniel Jung.
-Contact: djungbremen@gmail.com
+Copyright (C) 2013-2023 Daniel Jung.
+Contact: proggy-contact@mailbox.org
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free

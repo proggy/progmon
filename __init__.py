@@ -4,8 +4,8 @@
 # Copyright notice
 # ----------------
 #
-# Copyright (C) 2011-2014 Daniel Jung
-# Contact: djungbremen@gmail.com
+# Copyright (C) 2011-2023 Daniel Jung
+# Contact: proggy-contact@mailbox.org
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -21,29 +21,28 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
 #
-"""This module offers different methods for showing the current status of an
+"""progmon - a simple progress monitor
+
+This module offers different methods for showing the current status of an
 iterative algorithm, or to control its execution, for example to abort it as
 soon as certain abort criterions are met."""
-#
-# To do:
-# --> write variant of Converge or extend Converge to use standard error as
-#     criterion
-#
-__created__ = '2011-09-13'
-__modified__ = '2014-01-14'
 
 import calendar
-import commands
+import subprocess
 import datetime
 import numpy
 import os
 import select
 import signal
 import sys
-import termios
 import time
-import tty
 
+try:
+    import termios  # only available on POSIX systems (Linux, Mac OS X, ...)
+    import tty  # requires termios
+except ModuleNotFoundError:
+    termios = None
+    tty = None
 
 class Bar(object):
     """Display a progress bar when executing a loop with a fixed number of
@@ -76,20 +75,9 @@ class Bar(object):
     all iterative algorithms that leave the loop on some convergence criterions
     after a variable number of steps (e.g., while-loops). Of course, the number
     of loops that will probably be used could be estimated, but this is not the
-    way this class is intended to be used. See the class *OpenBar* for that."""
-    #
-    # TO DO:
-    #
-    # - multiple progress bars at once, to show status of multiple subprocesses
-    # - allow nested progress bars, passing and multiplying step numbers to the
-    #   inner-next instance
-    # - report elapsed time instead of printing "ETC 0 sec"
-    # - save start and end times (and duration), to check them later"""
-    #
-    __created__ = '2011-09-13'
-    __modified__ = '2012-09-04'
-    # former tb.Progress from 2011-02-13 - 2011-06-09
-
+    way this class is intended to be used. See the class *OpenBar* for that.
+    """
+    
     def __init__(self, nstep=1, text='progress', width=None, verbose=True,
                  etc=True):
 
@@ -139,7 +127,8 @@ class Bar(object):
     def jump(self, howmany=1):
         """Skip one or several steps. Using this instead of *step()* is only
         important for the correct calculation of the estimated time to complete
-        (ETC)."""
+        (ETC).
+        """
         if not self._verbose:
             return
         self._step += howmany
@@ -160,7 +149,8 @@ class Bar(object):
         self._lastcall = now
 
     def write(self):
-        """Update the progress bar on the screen."""
+        """Update the progress bar on the screen.
+        """
         if not self._verbose:
             return
 
@@ -210,7 +200,8 @@ class Bar(object):
             self.end()
 
     def end(self):
-        """Leave the progress bar, insert a line break on the screen."""
+        """Leave the progress bar, insert a line break on the screen.
+        """
         if not self._verbose:
             return
         if not self._end:
@@ -218,7 +209,8 @@ class Bar(object):
             self._end = True
 
     def reset(self):
-        """Reset the counter, start over with the progress bar."""
+        """Reset the counter, start over with the progress bar.
+        """
         self.end()
         now = time.time()
         self._step = 0
@@ -249,11 +241,7 @@ class OpenBar(object):
     Intended use: For example, an iterative averaging process will be aborted
     as soon as a certain accuracy has been reached. The progress measure will
     be this accuracy.
-
-    Future plans:
-
-    - use something different than linear extrapolation"""
-    # 2012-03-05
+    """
 
     def __init__(self, target, start=None, text='progress', width=None,
                  verbose=True, etc=False):
@@ -266,18 +254,12 @@ class Monitor(object):
 
     Update the line by using carriage return each time the method *step()* is
     called. Do this until the method *end()* is called (then, a line break is
-    issued)."""
-    #
-    # To do:
-    # --> support complex numbers
-    #
-    # 2011-09-13 - 2012-07-16
-    # former tb.Monitor from 2011-05-26 - 2011-06-09
+    issued).
+    """
 
     def __init__(self, **kwargs):
         # define standard formats for some types
-        self._stdformats = {int: '%i', str: '%s', float: '%.2f',
-                            long: '%lo'}  # complex: '%.2f+%.2fi' ??
+        self._stdformats = {int: '%i', str: '%s', float: '%.2f'}  # complex: '%.2f + %.2fi' ??
 
         # fetch special keyword arguments
         self._stdformats.update(**kwargs.pop('stdformats', {}))
@@ -304,7 +286,8 @@ class Monitor(object):
 
     def update(self, **values):
         """Update the values of one or more variables, or add new variables to
-        the status line."""
+        the status line.
+        """
         if not self._verbose:
             return
         self._values.update(**values)
@@ -314,8 +297,8 @@ class Monitor(object):
         # """Update one value, or add a new variable to monitor. This is for
         # calls from other Cython modules only, as Cython cannot handle
         # variable argument lists. So, for each value to update, a separate
-        # call of this method must be made."""
-        # 2012-04-25 - 2012-04-26
+        # call of this method must be made.
+        # """
         #if not self._verbose:
         #return
         #self._values[name] = value
@@ -330,8 +313,8 @@ class Monitor(object):
 
     def reset(self):
         """Reset the status line. Empty the list of values and begin a new
-        status line."""
-        # 2012-04-26
+        status line.
+        """
         if not self._verbose:
             return
         self.end()
@@ -341,8 +324,8 @@ class Monitor(object):
     def _write(self):
         """Write new line to stdout (overwrite existing line using carriage
         return). If *now* is *True*, tell the *StatusLine* instance to ignore
-        the delay."""
-        # 2012-07-16
+        the delay.
+        """
 
         if not self._verbose:
             return
@@ -353,8 +336,7 @@ class Monitor(object):
         for key in keys[:]:
             if key not in self._values:
                 keys.remove(key)
-        restkeys = self._values.keys()
-        restkeys.sort()
+        restkeys = sorted(self._values.keys())
         for key in restkeys:
             if key not in keys:
                 keys.append(key)
@@ -388,7 +370,8 @@ class Monitor(object):
         return self.end()
 
     def remove(self, *names):
-        """Stop monitoring the specified variables."""
+        """Stop monitoring the specified variables.
+        """
         for name in names:
             del self._values[name]
             del self._lengths[name]
@@ -409,8 +392,8 @@ class Monitor(object):
         return self.end()
 
     def set_delay(self, delay):
-        """Set the delay of the StatusLine instance."""
-        # 2012-07-16
+        """Set the delay of the StatusLine instance.
+        """
         if delay < 0:
             raise ValueError('delay must be a non-negative float')
         self._line.delay = float(delay)
@@ -425,6 +408,8 @@ class Abort(object):
     back into normal mode! Or use it as context manager (use the *with*
     statement), then finalization is done automatically.
 
+    Hint: This only works on POSIX systems right now (Linux, Mac OS X, ...).
+
     Example:
 
         >>> import time
@@ -434,15 +419,10 @@ class Abort(object):
         >>>         if a.check():
         >>>             break  # leave loop early, because "q" has been pressed
     """
-    # 2012-01-18 - 2013-07-24
 
     def __init__(self, key='q', timeout=0):
-        """Initialize. Specify key and timeout. Put terminal into cbreak mode."""
-        #
-        # To do:
-        # --> enable key combinations (e.g., CTRL+q)
-        # --> enable special keys (e.g., ESC)"""
-        #
+        """Initialize. Specify key and timeout. Put terminal into cbreak mode.
+        """
 
         # get key
         if len(key) != 1:
@@ -459,7 +439,9 @@ class Abort(object):
         # initialize other attributes
         try:
             self.oldattr = termios.tcgetattr(sys.stdin)
-        except:
+        except AttributeError:
+            sys.stdout.write('Warning: Could not get tty attributes. Probably this is not a POSIX system. '
+                             'Abort key will be disabled.\n')
             self.disabled = True  # disable, probably does not work with nohup
             return
 
@@ -468,11 +450,17 @@ class Abort(object):
         self.count = 0  # count the total number of checks made
 
         # enter cbreak mode
-        tty.setcbreak(sys.stdin.fileno())
-
+        try:
+            tty.setcbreak(sys.stdin.fileno())  # only exists on POSIX systems
+        except AttributeError:
+            sys.stdout.write('Warning: Could not enter cbreak mode. Probably this is not a POSIX system. '
+                             'Abort key will be disabled.\n')
+            self.disabled = True
+    
     def check(self):
         """Check if the key has been pressed by now. All other contents of the
-        keyboard buffer are ignored."""
+        keyboard buffer are ignored.
+        """
 
         if self.disabled:
             return
@@ -490,7 +478,8 @@ class Abort(object):
 
     def end(self):
         """Finalize. Put the terminal back into normal mode. Return string
-        buffer."""
+        buffer.
+        """
         if self.disabled:
             return
 
@@ -511,13 +500,15 @@ class Abort(object):
         self.end()
 
     def reset(self):
-        """Reset the abort handler."""
+        """Reset the abort handler.
+        """
         self.aborted = False
 
     def report(self):
-        """If the handler was triggered, display a message."""
+        """If the handler was triggered, display a message.
+        """
         if self.aborted:
-            print 'Process has been aborted by key press (%s)' % self.key
+            print(f'Process has been aborted by key press ({self.key})')
 
 
 class Until(object):
@@ -525,27 +516,29 @@ class Until(object):
     conveniently confine the execution time of an iterative algorithm.
 
     You can specify either a maximum duration (execution time) or a specific
-    date."""
-    #
-    # To do:
-    # --> define word "next", excluding the present day, to allow something
-    #     like "next tuesday" ==> even if it is tuesday right now, run until
-    #     next tuesday
-    # --> document the syntax for specifying dates and durations
-    #
-    # 2012-06-19 - 2013-07-23
+    datetime.
+
+    Example:
+
+    >>> import time
+    >>> with Until('1m') as u:  # run at most for one minute
+    >>>     for i in range(1000):
+    >>>         time.sleep(1)  # do something
+    >>>         if u.check():
+    >>>             break  # leave loop early, because datetime/duration has been reached
+    """
 
     MONTHS = [month.lower() for month in calendar.month_name[1:]]
     MONTHS_SHORT = [month.lower() for month in calendar.month_abbr[1:]]
     DAYS = [day.lower() for day in calendar.day_name]
     DAYS_SHORT = [day.lower() for day in calendar.day_abbr]
-    DAYNUM = dict(zip(DAYS+DAYS_SHORT, range(7)+range(7)))
-    MONTHNUM = dict(zip(MONTHS+MONTHS_SHORT, range(1, 13)+range(1, 13)))
+    DAYNUM = dict(zip(DAYS + DAYS_SHORT, list(range(7)) + list(range(7))))
+    MONTHNUM = dict(zip(MONTHS + MONTHS_SHORT, list(range(1, 13)) + list(range(1, 13))))
     SPECIAL = ['tomorrow']
 
     def __init__(self, until=None):
-        """Initialize. Specify datetime or duration."""
-        # 2012-06-25 - 2012-07-05
+        """Initialize. Specify datetime or duration.
+        """
 
         # remember time when object was created
         self.created = time.time()  # [seconds since begin of epoch]
@@ -564,21 +557,21 @@ class Until(object):
         elif isinstance(until, datetime.timedelta):
             # support datetime.timedelta objects
             self.timestamp = self.created+until.total_seconds()
-        elif isinstance(until, basestring):
+        elif isinstance(until, str):
             # parse string
             # decide if a date-time combination or a duration is given
             # criterion: for a date/time, at least one character out of "/-:."
             # or some known phrases (for weekdays or months) must be given
             if until == '':
-                # run infinitely
+                # run indefinitely
                 self.timestamp = None
             elif self.isdatetime(until):
                 # parse datetime
                 until = until.lower()
                 for word in until.split(' '):
-                    if self.one_eq(self.DAYS+self.DAYS_SHORT, word):
+                    if self.one_eq(self.DAYS + self.DAYS_SHORT, word):
                         self.goto_day(word)
-                    elif self.one_eq(self.MONTHS+self.MONTHS_SHORT, word):
+                    elif self.one_eq(self.MONTHS + self.MONTHS_SHORT, word):
                         self.goto_month(word)
                     elif word == 'tomorrow':
                         self.goto_tomorrow()
@@ -593,7 +586,7 @@ class Until(object):
                     elif len(word) in (1, 2) and self.only_digits(word):
                         self.goto_mday(int(word))
                     elif word.count('/') == 2:
-                        ### also respect korean dates here, e.g. 10/29/2012
+                        ### also respect Korean/American dates here, e.g. 10/29/2012
                         year, month, mday = word.split('/')
                         self.goto_date(year, month, mday)
                     elif word.count('-') == 2:
@@ -610,24 +603,24 @@ class Until(object):
                 current = ''
                 dur = 0  # duration in seconds
                 for char in until:
-                    if char is ' ':
+                    if char == ' ':
                         continue
                     elif char in 'hmsayMwd':
                         # process current value
                         if char == 's':
                             dur += int(current)
                         elif char == 'm':
-                            dur += int(current)*60
+                            dur += int(current) * 60
                         elif char == 'h':
-                            dur += int(current)*3600
+                            dur += int(current) * 3600
                         elif char == 'd':
-                            dur += int(current)*86400
+                            dur += int(current) * 86400
                         elif char == 'w':
-                            dur += int(current)*604800
+                            dur += int(current) * 604800
                         elif char == 'M':
-                            dur += int(current)*2592000  # 1 month == 30 days
+                            dur += int(current) * 2592000  # 1 month == 30 days
                         elif char in 'ay':
-                            dur += int(current)*31104000  # 1 year == 360 days
+                            dur += int(current) * 31104000  # 1 year == 360 days
 
                         # reset current word
                         current = ''
@@ -649,8 +642,8 @@ class Until(object):
                              % time.ctime(self.timestamp))
 
     def goto_tomorrow(self):
-        """Move timestamp forward to the next day."""
-        # 2012-06-26
+        """Move timestamp forward to the next day.
+        """
         tdict = time.localtime(self.timestamp)
         tlist = list(tdict)
         tlist[2] += 1
@@ -658,8 +651,8 @@ class Until(object):
         self.goback_midnight()
 
     def goto_date(self, year, month, mday):
-        """Move timestamp to the given date."""
-        # 2012-06-26
+        """Move timestamp to the given date.
+        """
 
         # get timestamp
         tdict = time.localtime(self.timestamp)
@@ -690,8 +683,8 @@ class Until(object):
         self.goback_midnight()
 
     def goto_year(self, year):
-        """Move timestamp forward to the given year."""
-        # 2012-06-26
+        """Move timestamp forward to the given year.
+        """
 
         # get timestamp
         tdict = time.localtime(self.timestamp)
@@ -707,8 +700,8 @@ class Until(object):
         self.timestamp = time.mktime(tlist)
 
     def goto_mday(self, mday):
-        """Move timestamp forward to the given day of the month."""
-        # 2012-06-26
+        """Move timestamp forward to the given day of the month.
+        """
 
         # get timestamp
         tdict = time.localtime(self.timestamp)
@@ -725,8 +718,8 @@ class Until(object):
         self.timestamp = time.mktime(tlist)
 
     def goto_time(self, hours=0, minutes=0, seconds=None):
-        """Move timestamp forward to the next given time."""
-        # 2012-06-26
+        """Move timestamp forward to the next given time.
+        """
 
         # force integer values
         hours = int(hours)
@@ -761,11 +754,11 @@ class Until(object):
                         tlist[5] = seconds
 
         # overwrite timestamp
-        self.timestamp = time.mktime(tlist)
+        self.timestamp = time.mktime(tuple(tlist))
 
     def goto_day(self, day):
-        """Move timestamp forward to the next given day of the week."""
-        # 2012-06-25
+        """Move timestamp forward to the next given day of the week.
+        """
 
         # move forward a certain number of days
         while time.localtime(self.timestamp).tm_wday != self.DAYNUM[day]:
@@ -773,8 +766,8 @@ class Until(object):
         self.goback_midnight()
 
     def goback_midnight(self):
-        """Move backward to the beginning of that day (midnight)."""
-        # 2012-06-25
+        """Move backward to the beginning of the day (midnight).
+        """
         timetuple = list(time.localtime(self.timestamp))
         timetuple[3] = 0
         timetuple[4] = 0
@@ -783,8 +776,8 @@ class Until(object):
         self.timestamp = time.mktime(timetuple)
 
     def goto_month(self, month):
-        """Move timestamp forward to the next given month."""
-        # 2012-06-25 - 2012-06-26
+        """Move timestamp forward to the next given month.
+        """
 
         # move forward a certain number of months
         timetuple = list(time.localtime(self.timestamp))
@@ -796,33 +789,33 @@ class Until(object):
         self.goback_midnight()
 
     def goback_first(self):
-        """Move backward to the beginning of the first day of the month."""
-        # 2012-06-26
+        """Move backward to the beginning of the first day of the month.
+        """
         timetuple = list(time.localtime(self.timestamp))
         timetuple[2] = 1
         #timetuple[8] = -1 # because of summertime
         self.timestamp = time.mktime(timetuple)
 
     def check(self):
-        """Check if the specified time has already been reached."""
-        # 2012-06-25 - 2012-06-27
+        """Check if the specified time has already been reached.
+        """
         return False if self.timestamp is None \
             else time.time() > self.timestamp
 
     def isdatetime(self, string):
         """Decide if the given string contains a date-time combination. If so,
-        return *True*. Otherwise, it will contain a duration, and *False* is
-        returned."""
-        # 2012-06-25 - 2012-06-26
-        return self.one_in(['/', ':', '-', '.', 'tomorrow']+self.MONTHS +
-                           self.MONTHS_SHORT+self.DAYS+self.DAYS_SHORT,
+        return *True*. Otherwise (e.g. if it contains a duration), *False* is
+        returned.
+        """
+        return self.one_in(['/', ':', '-', '.', 'tomorrow'] + self.MONTHS +
+                           self.MONTHS_SHORT + self.DAYS + self.DAYS_SHORT,
                            string.lower())
 
     @staticmethod
     def one_in(seq, obj):
         """Return *True* if at least one element of the given sequence *seq* is
-        contained in the given object *obj*. Otherwise, return *False*."""
-        # 2012-06-25
+        contained in the given object *obj*. Otherwise, return *False*.
+        """
         for elem in seq:
             if elem in obj:
                 return True
@@ -831,8 +824,8 @@ class Until(object):
     @staticmethod
     def one_is(seq, obj):
         """Return *True* if at least one element of the given sequence *seq* is
-        identical to the object *obj*. Otherwise, return *False*."""
-        # 2012-06-25
+        identical to the object *obj*. Otherwise, return *False*.
+        """
         for elem in seq:
             if elem is obj:
                 return True
@@ -841,8 +834,8 @@ class Until(object):
     @staticmethod
     def one_eq(seq, obj):
         """Return *True* if at least one element of the given sequence *seq* is
-        equal to the object *obj*. Otherwise, return *False*."""
-        # 2012-06-25
+        equal to the object *obj*. Otherwise, return *False*.
+        """
         for elem in seq:
             if elem == obj:
                 return True
@@ -851,16 +844,16 @@ class Until(object):
     @staticmethod
     def only_digits(string):
         """Return *True* if the given string contains only digits. Otherwise,
-        return *False*."""
-        # 2012-06-26
+        return *False*.
+        """
         for char in string:
             if char not in '0123456789':
                 return False
         return True
 
     def __iter__(self):
-        """Return iterator."""
-        # 2012-06-26 - 2012-09-04
+        """Return iterator.
+        """
         for element in list(time.localtime(self.timestamp)):
             yield element
 
@@ -868,7 +861,6 @@ class Until(object):
         return len(time.localtime(self.timestamp))
 
     def __repr__(self):
-        # 2012-06-26 - 2012-12-10
         if self.timestamp is None:
             return '%s()' % self.__class__.__name__
         else:
@@ -877,38 +869,32 @@ class Until(object):
                                                time.localtime(self.timestamp)))
 
     def __enter__(self):
-        # 2012-06-26
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        # 2012-06-26
         pass
 
     def report(self):
-        """If this handler has been triggered, display a message."""
+        """If this handler has been triggered, display a message.
+        """
         if self.check():
-            print 'Timelimit has been reached (%s).' \
-                % time.ctime(self.timestamp)
+            print(f'Timelimit has been reached ({time.ctime(self.timestamp)}).')
 
 
 class Converge(object):
-    """Check data for convergence criterion within an interative algorithm.
-    Specify a certain tolerance (accuracy) that should be reached. Increase the
-    "smooth value" to average over the last few deltas."""
-    #
-    # Future plans:
-    # --> choose from various convergence criterions (also based on standard
-    #     error)
-    # --> could choose from mean, gmean, min, max, max-min (peak-to-peak), ...
-    #     (find more under http://en.wikipedia.org/wiki/Average)
-    # --> offer relative and absolute versions of each criterion
-    # --> let the user specify his own criterion (as a function object)
-    # --> use Cython, write version that is callable from C, support OpenMP
-    # --> add feature to remember several values (e.g., 5) and check that all the
-    #     deltas are small enough (then, it is not enought that "by chance" the
-    #     delta value drops below the tolerance)"""
-    #
-    # 2012-03-02 - 2014-01-14
+    """Check data for convergence criterion within an iterative algorithm.
+    Specify a certain tolerance (accuracy) that should be reached. Increase
+    the "smooth value" to average over the last few deltas.
+
+    Example:
+
+    >>> with Converge(tol=.1, smooth=1) as c:
+    >>>     for x in range(1, 21):
+    >>>         print(f'{1/x:.4f}  {c.check(1/x)}')
+    
+    Note that the class also works for Numpy 1D arrays. In this case, the mean
+    delta is compared to the tolerance level.
+    """
 
     def __init__(self, tol=None, smooth=1):  # active=True, criterion=None
                                              # dtype=None, shape=None
@@ -928,7 +914,8 @@ class Converge(object):
     def check(self, data):
         """Check convergence criterion. Return *True* if the requested accuracy
         has been reached, otherwise *False*. If *data* is *None*, return
-        *False*."""
+        *False*.
+        """
         if data is None:
             return False
 
@@ -948,7 +935,7 @@ class Converge(object):
         # calculate new delta (use quadratic mean for now)
         #self._delta.append(numpy.linalg.norm((data-self._data_old)/data)/ \
                         #numpy.sqrt(data.size))
-        self._delta.append(numpy.mean(numpy.abs((data-self._data_old)/data)))
+        self._delta.append(numpy.mean(numpy.abs((data - self._data_old) / data)))
 
         # only check the criterion if the number of deltas given by smooth is
         # already reached
@@ -971,7 +958,8 @@ class Converge(object):
 
     def delta(self):
         """Return the current mean delta (based on the last call of *check()*).
-        Return -1 if the delta list is still empty."""
+        Return -1 if the delta list is still empty.
+        """
         if len(self._delta) > 0:
             mdelta = numpy.mean(self._delta)
             if not numpy.isnan(mdelta):
@@ -990,23 +978,24 @@ class Converge(object):
         pass
 
     def report(self):
-        """If the handler was triggered, display a message."""
+        """If the handler was triggered, display a message.
+        """
         if self.check():
-            print 'Data converged within a tolerance of %g.' % self.tol
+            print('Data converged within a tolerance of {self.tol:g}.')
 
 
 def get_columns():
     """Try to get the number of columns of the current terminal window. If
-    failing, return standard width (80 columns)."""
-    # 2012-03-05
+    failing, return standard width (80 columns).
+    """
     try:
         # then try environment variable
         columns = int(os.environ['COLUMNS'])
     except (KeyError, ValueError):
         # try tput
         try:
-            columns = int(commands.getoutput('tput cols'))
-        except ValueError:
+            columns = int(subprocess.getoutput('tput cols'))
+        except:
             # otherwise, assume standard width
             columns = 80
     return columns
@@ -1014,14 +1003,24 @@ def get_columns():
 
 class StatusLine(object):
     """Show a status line that is updated by the user every once in a while
-    using "carriage return"."""
-    # 2012-04-10 - 2012-07-16
+    using "carriage return".
+
+    Example:
+
+    >>> import time
+    >>> with progmon.StatusLine('initial content') as sl:
+    >>>     time.sleep(1)
+    >>>     sl.update('new content')
+    >>>     time.sleep(1)
+    >>>     sl.update('new content 2')
+    >>> print('done')
+    """
 
     def __init__(self, line='', delay=0., cols=None):
         """Initialize status line object. Can be given an initial line, a
         minimum delay time and a custom number of columns (terminal width, will
-        be obtained automatically on Unix systems)."""
-        # 2012-04-10 - 2012-04-26
+        be obtained automatically on Unix systems).
+        """
 
         # set delay
         self.delay = float(delay)
@@ -1046,29 +1045,29 @@ class StatusLine(object):
         self._write(line)
 
     def _write(self, line):
-        """Write the given line, replacing the old one."""
-        # 2012-04-10 - 2012-04-26
+        """Write the given line, replacing the old one.
+        """
 
         if line != '':
             self._started = True
         oldlen = len(self._oldline)
         newlen = len(line)
         spaces_needed = oldlen-newlen if oldlen > newlen else 0
-        sys.stdout.write('\r'+line[:(self.cols-1)]+' '*spaces_needed)
+        sys.stdout.write('\r'+line[:(self.cols - 1)] + ' ' * spaces_needed)
         sys.stdout.flush()
 
         # update old line buffer
         self._oldline = line
         self._oldtime = time.time()
 
-    def update(self, line):
+    def update(self, line, now=False):
         """Update the line by the given string, replacing the old line.
         The line only gets printed if the line has changed, and if the given
-        delay time has been passed. If *now* is *True*, ignore the delay."""
-        # 2012-04-10 - 2012-07-16
+        delay time has been passed. If *now* is *True*, ignore the delay.
+        """
 
         # respect delay time
-        if time.time()-self._oldtime < self.delay:
+        if now is False and time.time() - self._oldtime < self.delay:
             return
 
         # check if line has changed
@@ -1080,8 +1079,8 @@ class StatusLine(object):
 
     def end(self):
         """End status line, issue a line break (only if the status line has
-        already been used)."""
-        # 2012-04-10 - 2012-04-26
+        already been used).
+        """
         if self._started and not self._ended:
             sys.stdout.write('\n')
             sys.stdout.flush()
@@ -1098,8 +1097,8 @@ class StatusLine(object):
 
     def reset(self):
         """Reset the status line (make a line break if neccessary and begin a
-        new status line)."""
-        # 2012-04-26
+        new status line).
+        """
         self.end()
         self._oldline = ''
         self._started = False
@@ -1107,18 +1106,19 @@ class StatusLine(object):
 
 
 class Terminate(object):
-    """Trap the TERM signal (15). For example, you can stop an interative
+    """Trap the TERM signal (15). For example, you can stop an iterative
     algorithm in a controlled way, leaving the loop after the next iteration
     and still saving the results. This is done by sending the TERM signal to
-    the process (also possible remotely), i.e. in a Unix shell you can do `kill
-    12345`, or you can use the program *top*.
+    the process (also possible remotely), i.e. in a Unix shell you can do
+    `kill`, followed by the process number, or you can use the program *top*
+    to kill the process.
 
-    Note: Works only on Unix-based systems (Linux etc.)."""
-    # 2012-07-16 - 2012-07-17
+    Note: Works only on Unix-based systems (Linux etc.).
+    """
 
     def __init__(self):
-        """Initialize the terminate handler."""
-        # 2012-07-16
+        """Initialize the terminate handler.
+        """
 
         # initialize the flag
         self.terminated = False
@@ -1128,60 +1128,57 @@ class Terminate(object):
 
     def terminate(self, signal, frame):
         """If the TERM signal has been received, this method is executed,
-        setting the flag to *True*."""
-        # 2012-07-16
-        # former tb.kpm.__init__._Ados.terminate and
-        # tb.kpm.__init__._Gdos.terminate
+        setting the flag to *True*.
+        """
         self.terminated = True
 
     def check(self):
         """Return *True* if a TERM signal has been received, otherwise
-        *False*."""
-        # 2012-07-16
+        *False*.
+        """
         return self.terminated
 
     def reset(self):
         """Reset the terminate handler, setting the flag back to *False* and
-        waiting for a new TERM signal."""
-        # 2012-07-16
+        waiting for a new TERM signal.
+        """
         self.terminated = False
         signal.signal(signal.SIGTERM, self.terminate)
 
     def end(self):
         """Remove the trap. Set the action for the TERM signal back to system
-        standard."""
-        # 2012-07-16
+        standard.
+        """
         if signal.getsignal(signal.SIGTERM) != signal.SIG_DFL:
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
     def __del__(self):
         """Remove the trap, set action back to system defaults before the
-        handler is deleted."""
-        # 2012-07-16
+        handler is deleted.
+        """
         self.end()
 
     def __enter__(self):
-        """Enable context manager functionality, enter context."""
-        # 2012-07-16
+        """Enable context manager functionality, enter context.
+        """
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        """Leave context."""
-        # 2012-07-16
+        """Leave context.
+        """
         self.end()
 
     def report(self):
-        """If this handler was triggered, display a message."""
+        """If this handler was triggered, display a message.
+        """
         if self.terminated:
-            print 'Process has been terminated'
+            print('Process has been terminated')
 
 
 def _nicetime(seconds):
     """Return nice string representation of the given number of seconds in a
-    human-readable format (approximated). Example: 3634 s --> 1 h."""
-    # 2012-09-04
-    # copied from tb.misc.nicetime (written 2012-02-17)
-    from itertools import izip
+    human-readable format (approximated). Example: 3634 s --> 1 h.
+    """
 
     # create list of time units (must be sorted from small to large units)
     units = [{'factor': 1,  'name': 'sec'},
@@ -1193,9 +1190,9 @@ def _nicetime(seconds):
              {'factor': 12, 'name': 'yrs'}]
 
     value = int(seconds)
-    for unit1, unit2 in izip(units[:-1], units[1:]):
-        if value/unit2['factor'] == 0:
+    for unit1, unit2 in zip(units[:-1], units[1:]):
+        if value // unit2['factor'] == 0:
             return '%i %s' % (value, unit1['name'])
         else:
-            value /= unit2['factor']
+            value //= unit2['factor']
     return '%i %s' % (value, unit2['name'])
